@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanGrid - Operator Control Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span>UrbanGrid Operator</span>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-tab="tab-search">
+                    <a href="#routes">Routes & Search</a>
+                </li>
+                <li class="menu-item" data-tab="tab-transports">
+                    <a href="#transports">Vehicles</a>
+                </li>
+                <li class="menu-item" data-tab="tab-alerts">
+                    <a href="#alerts">Delay Alerts</a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div id="sidebar-avatar" class="user-avatar">O</div>
+                    <div class="user-info">
+                        <div id="sidebar-username" class="user-name">Operator</div>
+                        <div id="sidebar-role" class="user-role">OPERATOR</div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard View -->
+        <main class="main-content">
+            <div id="global-alert" class="alert" style="display: none;"></div>
+
+            <!-- TAB 1: ROUTES SEARCH & VIEW -->
+            <section id="tab-search" class="tab-pane active">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Routes & Search</h2>
+                        <p>Search active transport lines and view active schedules</p>
+                    </div>
+                </div>
+
+                <!-- Search box -->
+                <div class="card-section">
+                    <div class="card-title">Search Transit Routes</div>
+                    <form id="search-routes-form">
+                        <div class="search-box-wrapper">
+                            <input type="text" id="search-source" class="input-control" placeholder="Source Terminal (e.g. Central)" required>
+                            <input type="text" id="search-destination" class="input-control" placeholder="Destination Terminal (e.g. Airport)" required>
+                            <button type="submit" class="btn" style="width: 140px;">Search</button>
+                            <button type="button" id="btn-reset-search" class="btn btn-secondary" style="width: 100px; display: none;" onclick="resetSearch()">Clear</button>
+                        </div>
+                    </form>
+                    
+                    <div class="table-container" style="margin-top: 20px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Route Name</th>
+                                    <th>Source</th>
+                                    <th>Destination</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody id="routes-search-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Timetables view -->
+                <div class="card-section">
+                    <div class="card-title">Active Timetables / Schedules</div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Route</th>
+                                    <th>Vehicle No.</th>
+                                    <th>Departure</th>
+                                    <th>Arrival</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedules-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TRANSPORTS INVENTORY -->
+            <section id="tab-transports" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Transport Inventory</h2>
+                        <p>Register new vehicles and view operational fleets</p>
+                    </div>
+                </div>
+
+                <div class="grid-split">
+                    <!-- Form side -->
+                    <div class="card-section">
+                        <div class="card-title">Add Transport Vehicle</div>
+                        <form id="transport-form">
+                            <div class="form-group">
+                                <label for="transportNumber">Vehicle / Flight Number</label>
+                                <input type="text" id="transportNumber" class="input-control" placeholder="e.g. TR-5002" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="transportType">Transport Type</label>
+                                <select id="transportType" class="input-control" required>
+                                    <option value="BUS">Bus</option>
+                                    <option value="TRAIN">Train</option>
+                                    <option value="METRO">Metro</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="capacity">Passenger Capacity</label>
+                                <input type="number" id="capacity" class="input-control" placeholder="e.g. 80" min="1" required>
+                            </div>
+
+                            <button type="submit" class="btn">Add Vehicle</button>
+                        </form>
+                    </div>
+
+                    <!-- Table side -->
+                    <div class="card-section">
+                        <div class="card-title">Fleet Directory</div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Vehicle Number</th>
+                                        <th>Type</th>
+                                        <th>Capacity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transports-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: DELAY ALERTS -->
+            <section id="tab-alerts" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Delay Alerts</h2>
+                        <p>Report delays or cancellations to keeping commuters informed</p>
+                    </div>
+                </div>
+
+                <div class="grid-split">
+                    <!-- Form side -->
+                    <div class="card-section">
+                        <div class="card-title">Publish Delay Alert</div>
+                        <form id="alert-form">
+                            <div class="form-group">
+                                <label for="alert-schedule">Target Schedule</label>
+                                <select id="alert-schedule" class="input-control" required>
+                                    <option value="">-- Select Schedule --</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="alert-type">Alert Type</label>
+                                <input type="text" id="alert-type" class="input-control" placeholder="e.g. Mechanical issue, Weather delay" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="alert-message">Description Message</label>
+                                <textarea id="alert-message" class="input-control" style="height: 100px; resize: none;" placeholder="e.g. BUS-101 has encountered minor delays due to signal maintenance at Hub A. Expect +15m delay." required></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger">Publish Alert</button>
+                        </form>
+                    </div>
+
+                    <!-- List side -->
+                    <div class="card-section">
+                        <div class="card-title">Published Transit Alerts</div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Schedule Info</th>
+                                        <th>Alert Type</th>
+                                        <th>Message</th>
+                                        <th>Time Logged</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alerts-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- API configuration and auth checker scripts -->
+    <script src="app.js"></script>
+    <script>
+        // Enforce operator permission
+        const auth = checkAuth(['ROLE_OPERATOR']);
+        if (!auth) {
+            throw new Error("Authorization Required");
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTabs();
+            loadAllRoutes();
+            loadSchedules();
+        });
+
+        // Tab switcher
+        function setupTabs() {
+            const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+            menuItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    document.querySelectorAll('.sidebar-menu .menu-item').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+                    
+                    item.classList.add('active');
+                    const tabId = item.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    if (tabId === 'tab-search') {
+                        loadAllRoutes();
+                        loadSchedules();
+                    } else if (tabId === 'tab-transports') {
+                        loadTransports();
+                    } else if (tabId === 'tab-alerts') {
+                        loadAlerts();
+                        populateSchedulesDropdown();
+                    }
+                });
+            });
+        }
+
+        // Notification alert helper
+        function showAlert(msg, isError = false) {
+            const alertDiv = document.getElementById('global-alert');
+            alertDiv.textContent = msg;
+            alertDiv.className = isError ? 'alert alert-danger' : 'alert alert-success';
+            alertDiv.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // ==========================================
+        // 1. ROUTE LIST & SEARCH LOGIC
+        // ==========================================
+        async function loadAllRoutes() {
+            try {
+                const routes = await fetchAPI('/routes');
+                displayRoutes(routes || []);
+            } catch (err) {
+                showAlert('Error loading routes list.', true);
+            }
+        }
+
+        function displayRoutes(routes) {
+            const tbody = document.getElementById('routes-search-tbody');
+            tbody.innerHTML = '';
+
+            if (routes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No routes found.</td></tr>`;
+                return;
+            }
+
+            routes.forEach(route => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${route.id}</td>
+                    <td><strong>${route.routeName}</strong></td>
+                    <td>${route.source}</td>
+                    <td>${route.destination}</td>
+                    <td>${route.estimatedDuration || 'N/A'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Route search form handler
+        document.getElementById('search-routes-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const source = document.getElementById('search-source').value.trim();
+            const destination = document.getElementById('search-destination').value.trim();
+            const resetBtn = document.getElementById('btn-reset-search');
+
+            try {
+                const results = await fetchAPI(`/routes/search?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}`);
+                displayRoutes(results || []);
+                resetBtn.style.display = 'block';
+            } catch (err) {
+                showAlert('Error executing route search.', true);
+            }
+        });
+
+        function resetSearch() {
+            document.getElementById('search-routes-form').reset();
+            document.getElementById('btn-reset-search').style.display = 'none';
+            loadAllRoutes();
+        }
+
+        async function loadSchedules() {
+            try {
+                const schedules = await fetchAPI('/schedules');
+                const tbody = document.getElementById('schedules-tbody');
+                tbody.innerHTML = '';
+
+                if (!schedules || schedules.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No timetables available.</td></tr>`;
+                    return;
+                }
+
+                schedules.forEach(schedule => {
+                    const tr = document.createElement('tr');
+                    const rName = schedule.route ? schedule.route.routeName : 'N/A';
+                    const tNum = schedule.transport ? schedule.transport.transportNumber : 'N/A';
+                    const dep = formatDateTime(schedule.departureTime);
+                    const arr = formatDateTime(schedule.arrivalTime);
+
+                    let statusBadge = '';
+                    if (schedule.status === 'ON_TIME') statusBadge = '<span class="badge badge-success">ON TIME</span>';
+                    else if (schedule.status === 'DELAYED') statusBadge = '<span class="badge badge-warning">DELAYED</span>';
+                    else statusBadge = '<span class="badge badge-danger">CANCELLED</span>';
+
+                    tr.innerHTML = `
+                        <td>${schedule.id}</td>
+                        <td><strong>${rName}</strong></td>
+                        <td>${tNum}</td>
+                        <td>${dep}</td>
+                        <td>${arr}</td>
+                        <td>${statusBadge}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // ==========================================
+        // 2. TRANSPORTS INVENTORY LOGIC
+        // ==========================================
+        async function loadTransports() {
+            try {
+                const transports = await fetchAPI('/transports');
+                const tbody = document.getElementById('transports-tbody');
+                tbody.innerHTML = '';
+
+                if (!transports || transports.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No transport inventory configured.</td></tr>`;
+                    return;
+                }
+
+                transports.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${t.id}</td>
+                        <td><strong>${t.transportNumber}</strong></td>
+                        <td><span class="badge badge-primary">${t.type}</span></td>
+                        <td>${t.capacity} passengers</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Failed to load transport lists.', true);
+            }
+        }
+
+        document.getElementById('transport-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const payload = {
+                transportNumber: document.getElementById('transportNumber').value.trim(),
+                type: document.getElementById('transportType').value,
+                capacity: parseInt(document.getElementById('capacity').value)
+            };
+
+            try {
+                await fetchAPI('/transports', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showAlert('Vehicle registered successfully.');
+                document.getElementById('transport-form').reset();
+                loadTransports();
+            } catch (err) {
+                showAlert('Failed to register vehicle. The vehicle number must be unique.', true);
+            }
+        });
+
+        // ==========================================
+        // 3. DELAY ALERTS LOGIC
+        // ==========================================
+        async function loadAlerts() {
+            try {
+                const alerts = await fetchAPI('/alerts');
+                const tbody = document.getElementById('alerts-tbody');
+                tbody.innerHTML = '';
+
+                if (!alerts || alerts.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No delay alerts posted.</td></tr>`;
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    const tr = document.createElement('tr');
+                    const schedInfo = alert.schedule 
+                        ? `Sched #${alert.schedule.id} (${alert.schedule.route ? alert.schedule.route.routeName : 'N/A'})` 
+                        : 'N/A';
+                    
+                    tr.innerHTML = `
+                        <td>${alert.id}</td>
+                        <td><strong>${schedInfo}</strong></td>
+                        <td><span class="badge badge-warning">${alert.alertType}</span></td>
+                        <td>${alert.message}</td>
+                        <td>${formatDateTime(alert.createdAt)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function populateSchedulesDropdown() {
+            try {
+                const schedules = await fetchAPI('/schedules');
+                const select = document.getElementById('alert-schedule');
+                select.innerHTML = '<option value="">-- Select Schedule --</option>';
+                
+                if (schedules) {
+                    schedules.forEach(s => {
+                        const rName = s.route ? s.route.routeName : 'Unknown';
+                        const tNum = s.transport ? s.transport.transportNumber : 'Unknown';
+                        select.innerHTML += `<option value="${s.id}">Sched #${s.id} - ${rName} (Vehicle: ${tNum})</option>`;
+                    });
+                }
+            } catch (err) {
+                console.error("Dropdown populate error:", err);
+            }
+        }
+
+        document.getElementById('alert-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const schedId = document.getElementById('alert-schedule').value;
+            const payload = {
+                schedule: { id: parseInt(schedId) },
+                alertType: document.getElementById('alert-type').value.trim(),
+                message: document.getElementById('alert-message').value.trim()
+            };
+
+            try {
+                await fetchAPI('/alerts', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showAlert('Delay Alert published successfully.');
+                document.getElementById('alert-form').reset();
+                loadAlerts();
+            } catch (err) {
+                showAlert('Failed to publish alert.', true);
+            }
+        });
+    </script>
+</body>
+</html>

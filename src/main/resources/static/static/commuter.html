@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanGrid - Commuter Center</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span>UrbanGrid Commuter</span>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-tab="tab-favorites">
+                    <a href="#favorites">My Favorites</a>
+                </li>
+                <li class="menu-item" data-tab="tab-transports">
+                    <a href="#transports">Vehicles</a>
+                </li>
+                <li class="menu-item" data-tab="tab-alerts">
+                    <a href="#alerts">Delay Alerts</a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div id="sidebar-avatar" class="user-avatar">C</div>
+                    <div class="user-info">
+                        <div id="sidebar-username" class="user-name">Commuter</div>
+                        <div id="sidebar-role" class="user-role">COMMUTER</div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard View -->
+        <main class="main-content">
+            <div id="global-alert" class="alert" style="display: none;"></div>
+
+            <!-- TAB 1: MY FAVORITE ROUTES -->
+            <section id="tab-favorites" class="tab-pane active">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>My Favorites</h2>
+                        <p>Track your saved transit pathways and quick-reference lines</p>
+                    </div>
+                </div>
+
+                <div class="grid-split">
+                    <!-- Form side -->
+                    <div class="card-section">
+                        <div class="card-title">Add Route to Favorites</div>
+                        <form id="favorite-form">
+                            <div class="form-group">
+                                <label for="fav-route-id">Route ID</label>
+                                <input type="number" id="fav-route-id" class="input-control" placeholder="Enter Route ID (e.g. 1)" min="1" required>
+                            </div>
+                            <button type="submit" class="btn">Add to Favorites</button>
+                        </form>
+                    </div>
+
+                    <!-- Table side -->
+                    <div class="card-section">
+                        <div class="card-title">Saved Favorite Routes</div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Favorite ID</th>
+                                        <th>Route ID</th>
+                                        <th>Route Name</th>
+                                        <th>Source</th>
+                                        <th>Destination</th>
+                                        <th>Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="favorites-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TRANSPORTS CATALOG -->
+            <section id="tab-transports" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Active Vehicles</h2>
+                        <p>View transport modes, capacity limits, and identifiers</p>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="card-title">Fleet Directory</div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Vehicle Number</th>
+                                    <th>Type</th>
+                                    <th>Seat Capacity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transports-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: REAL-TIME DELAY ALERTS FEED -->
+            <section id="tab-alerts" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Delay Alerts Feed</h2>
+                        <p>Real-time delays, alerts and notifications published by transit operators</p>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="card-title">Active Delay Notifications</div>
+                    <div id="alerts-feed-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- API configuration and auth checker scripts -->
+    <script src="app.js"></script>
+    <script>
+        // Enforce commuter permission
+        const auth = checkAuth(['ROLE_COMMUTER']);
+        if (!auth) {
+            throw new Error("Authorization Required");
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTabs();
+            loadFavorites();
+        });
+
+        // Tab switcher
+        function setupTabs() {
+            const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+            menuItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    document.querySelectorAll('.sidebar-menu .menu-item').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+                    
+                    item.classList.add('active');
+                    const tabId = item.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    if (tabId === 'tab-favorites') {
+                        loadFavorites();
+                    } else if (tabId === 'tab-transports') {
+                        loadTransports();
+                    } else if (tabId === 'tab-alerts') {
+                        loadAlertsFeed();
+                    }
+                });
+            });
+        }
+
+        // Notification helper
+        function showAlert(msg, isError = false) {
+            const alertDiv = document.getElementById('global-alert');
+            alertDiv.textContent = msg;
+            alertDiv.className = isError ? 'alert alert-danger' : 'alert alert-success';
+            alertDiv.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // ==========================================
+        // 1. FAVORITE ROUTES LOGIC
+        // ==========================================
+        async function loadFavorites() {
+            try {
+                const favorites = await fetchAPI('/favorites');
+                const tbody = document.getElementById('favorites-tbody');
+                tbody.innerHTML = '';
+
+                if (!favorites || favorites.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">You have no favorite routes saved yet.</td></tr>`;
+                    return;
+                }
+
+                favorites.forEach(fav => {
+                    const tr = document.createElement('tr');
+                    
+                    const rId = fav.route ? fav.route.id : 'N/A';
+                    const rName = fav.route ? fav.route.routeName : 'N/A';
+                    const src = fav.route ? fav.route.source : 'N/A';
+                    const dest = fav.route ? fav.route.destination : 'N/A';
+                    const dur = fav.route ? fav.route.estimatedDuration : 'N/A';
+
+                    tr.innerHTML = `
+                        <td>${fav.id}</td>
+                        <td>${rId}</td>
+                        <td><strong>${rName}</strong></td>
+                        <td>${src}</td>
+                        <td>${dest}</td>
+                        <td>${dur || 'N/A'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Error loading favorites list.', true);
+            }
+        }
+
+        document.getElementById('favorite-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const routeId = document.getElementById('fav-route-id').value;
+
+            try {
+                await fetchAPI(`/favorites/${routeId}`, { method: 'POST' });
+                showAlert('Route added to your favorites!');
+                document.getElementById('favorite-form').reset();
+                loadFavorites();
+            } catch (err) {
+                showAlert('Failed to add favorite. Ensure the Route ID exists in the system.', true);
+            }
+        });
+
+        // ==========================================
+        // 2. TRANSPORTS LOGIC
+        // ==========================================
+        async function loadTransports() {
+            try {
+                const transports = await fetchAPI('/transports');
+                const tbody = document.getElementById('transports-tbody');
+                tbody.innerHTML = '';
+
+                if (!transports || transports.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No transport vehicles cataloged.</td></tr>`;
+                    return;
+                }
+
+                transports.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${t.id}</td>
+                        <td><strong>${t.transportNumber}</strong></td>
+                        <td><span class="badge badge-primary">${t.type}</span></td>
+                        <td>${t.capacity} passengers</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Error loading transports catalog.', true);
+            }
+        }
+
+        // ==========================================
+        // 3. DELAY ALERTS LOGIC (FEED FORMAT)
+        // ==========================================
+        async function loadAlertsFeed() {
+            try {
+                const alerts = await fetchAPI('/alerts');
+                const container = document.getElementById('alerts-feed-container');
+                container.innerHTML = '';
+
+                if (!alerts || alerts.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">No active delays reported. Everything is on schedule!</div>`;
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    const item = document.createElement('div');
+                    item.className = 'alert-feed-item';
+                    
+                    const isSevere = alert.alertType.toLowerCase().includes('cancel') || alert.alertType.toLowerCase().includes('accident') || alert.alertType.toLowerCase().includes('breakdown');
+                    if (isSevere) {
+                        item.classList.add('danger-alert');
+                    } else {
+                        item.classList.add('warning-alert');
+                    }
+
+                    const schedInfo = alert.schedule 
+                        ? `Schedule #${alert.schedule.id} (${alert.schedule.route ? alert.schedule.route.routeName : 'Unknown Route'})` 
+                        : 'General Alert';
+
+                    item.innerHTML = `
+                        <div class="alert-feed-meta">
+                            <span>${schedInfo}</span> &bull; 
+                            <span style="font-weight: 600;">Type: ${alert.alertType}</span> &bull; 
+                            <span>Logged at ${formatDateTime(alert.createdAt)}</span>
+                        </div>
+                        <div class="alert-feed-body">
+                            ${alert.message}
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (err) {
+                showAlert('Error loading delay alerts feed.', true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanGrid - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>UrbanGrid</h1>
+                <p>Public Transport Management System</p>
+            </div>
+            
+            <div id="login-alert" class="alert alert-danger" style="display: none;"></div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" class="input-control" placeholder="Enter your username" required autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="input-control" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" id="login-btn" class="btn">Sign In</button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="register.html">Sign up here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // If already logged in, skip login page
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        if (token && role) {
+            redirectDashboard(role);
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value;
+            const alertDiv = document.getElementById('login-alert');
+            const submitBtn = document.getElementById('login-btn');
+
+            alertDiv.style.display = 'none';
+
+            if (!usernameInput || !passwordInput) {
+                alertDiv.textContent = 'Please enter both username and password.';
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.style.display = 'block';
+                return;
+            }
+
+            submitBtn.textContent = 'Signing in...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: usernameInput,
+                        password: passwordInput
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Store credentials in localStorage
+                    localStorage.setItem('token', data.accessToken);
+                    localStorage.setItem('role', data.role);
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('email', data.email);
+                    localStorage.setItem('userId', data.id);
+
+                    alertDiv.textContent = 'Login successful! Redirecting...';
+                    alertDiv.className = 'alert alert-success';
+                    alertDiv.style.display = 'block';
+
+                    setTimeout(() => {
+                        redirectDashboard(data.role);
+                    }, 1000);
+                } else {
+                    const errorText = await response.text();
+                    alertDiv.textContent = errorText || 'Invalid username or password.';
+                    alertDiv.className = 'alert alert-danger';
+                    alertDiv.style.display = 'block';
+                }
+            } catch (err) {
+                alertDiv.textContent = 'Cannot connect to backend server. Make sure it is running on port 8080.';
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.style.display = 'block';
+                console.error(err);
+            } finally {
+                submitBtn.textContent = 'Sign In';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

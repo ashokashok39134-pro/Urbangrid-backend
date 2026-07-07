@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanGrid - Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN for modern analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span>UrbanGrid Admin</span>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-tab="tab-dashboard">
+                    <a href="#dashboard">Dashboard</a>
+                </li>
+                <li class="menu-item" data-tab="tab-users">
+                    <a href="#users">Users</a>
+                </li>
+                <li class="menu-item" data-tab="tab-routes">
+                    <a href="#routes">Routes</a>
+                </li>
+                <li class="menu-item" data-tab="tab-schedules">
+                    <a href="#schedules">Schedules</a>
+                </li>
+                <li class="menu-item" data-tab="tab-transports">
+                    <a href="#transports">Transports</a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div id="sidebar-avatar" class="user-avatar">A</div>
+                    <div class="user-info">
+                        <div id="sidebar-username" class="user-name">Admin</div>
+                        <div id="sidebar-role" class="user-role">ADMIN</div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard View -->
+        <main class="main-content">
+            <!-- Alert Div for Notifications -->
+            <div id="global-alert" class="alert" style="display: none;"></div>
+
+            <!-- TAB 1: DASHBOARD OVERVIEW -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Analytics Dashboard</h2>
+                        <p>Real-time statistics & public transport reports</p>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Routes</div>
+                        <div id="stat-routes" class="stat-val">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Schedules</div>
+                        <div id="stat-schedules" class="stat-val">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Users</div>
+                        <div id="stat-users" class="stat-val">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Transports</div>
+                        <div id="stat-transports" class="stat-val">0</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(239,68,68,0.2);">
+                        <div class="stat-label">Total Delay Alerts</div>
+                        <div id="stat-alerts" class="stat-val" style="color: var(--danger);">0</div>
+                    </div>
+                </div>
+
+                <!-- Chart.js Reports -->
+                <div class="reports-grid">
+                    <div class="card-section">
+                        <div class="card-title">Schedule Volume by Day</div>
+                        <div class="chart-wrapper">
+                            <canvas id="volumeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card-section">
+                        <div class="card-title">Transport Type Share</div>
+                        <div class="chart-wrapper">
+                            <canvas id="shareChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: USER MANAGEMENT -->
+            <section id="tab-users" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>User Management</h2>
+                        <p>View registered accounts and manage credentials</p>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="card-title">
+                        <span>System Users</span>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="btn-all-users" class="btn btn-secondary active" style="padding: 6px 12px; font-size: 13px; width: auto;" onclick="loadUsers(false)">All Users</button>
+                            <button id="btn-operator-users" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; width: auto;" onclick="loadUsers(true)">Operators Only</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: ROUTES CRUD -->
+            <section id="tab-routes" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Route Management</h2>
+                        <p>Create, update and delete transit paths</p>
+                    </div>
+                </div>
+
+                <div class="grid-split">
+                    <!-- Form side -->
+                    <div class="card-section">
+                        <div id="route-form-title" class="card-title">Add New Route</div>
+                        <form id="route-form">
+                            <input type="hidden" id="route-id">
+                            
+                            <div class="form-group">
+                                <label for="routeName">Route Name / Number</label>
+                                <input type="text" id="routeName" class="input-control" placeholder="e.g. Metro Line A" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="source">Source Terminal</label>
+                                <input type="text" id="source" class="input-control" placeholder="e.g. Central Station" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="destination">Destination Terminal</label>
+                                <input type="text" id="destination" class="input-control" placeholder="e.g. Airport Terminal 1" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="estimatedDuration">Estimated Duration</label>
+                                <input type="text" id="estimatedDuration" class="input-control" placeholder="e.g. 45 mins" required>
+                            </div>
+
+                            <button type="submit" id="route-submit-btn" class="btn">Create Route</button>
+                            <button type="button" id="route-cancel-btn" class="btn btn-secondary" style="margin-top: 10px; display: none;" onclick="resetRouteForm()">Cancel Edit</button>
+                        </form>
+                    </div>
+
+                    <!-- Table side -->
+                    <div class="card-section">
+                        <div class="card-title">Existing Routes</div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Source</th>
+                                        <th>Destination</th>
+                                        <th>Duration</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="routes-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: SCHEDULES CRUD -->
+            <section id="tab-schedules" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Schedules Management</h2>
+                        <p>Link routes, transports, and departure schedules</p>
+                    </div>
+                </div>
+
+                <div class="grid-split">
+                    <!-- Form side -->
+                    <div class="card-section">
+                        <div id="schedule-form-title" class="card-title">Add Schedule</div>
+                        <form id="schedule-form">
+                            <input type="hidden" id="schedule-id">
+                            
+                            <div class="form-group">
+                                <label for="sched-route">Route</label>
+                                <select id="sched-route" class="input-control" required>
+                                    <option value="">-- Select Route --</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="sched-transport">Transport Vehicle</label>
+                                <select id="sched-transport" class="input-control" required>
+                                    <option value="">-- Select Transport --</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="departureTime">Departure Date & Time</label>
+                                <input type="datetime-local" id="departureTime" class="input-control" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="arrivalTime">Arrival Date & Time</label>
+                                <input type="datetime-local" id="arrivalTime" class="input-control" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="sched-status">Status</label>
+                                <select id="sched-status" class="input-control" required>
+                                    <option value="ON_TIME">ON TIME</option>
+                                    <option value="DELAYED">DELAYED</option>
+                                    <option value="CANCELLED">CANCELLED</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" id="sched-submit-btn" class="btn">Create Schedule</button>
+                            <button type="button" id="sched-cancel-btn" class="btn btn-secondary" style="margin-top: 10px; display: none;" onclick="resetScheduleForm()">Cancel Edit</button>
+                        </form>
+                    </div>
+
+                    <!-- Table side -->
+                    <div class="card-section">
+                        <div class="card-title">Active Timetables</div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Route</th>
+                                        <th>Vehicle No.</th>
+                                        <th>Departure</th>
+                                        <th>Arrival</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schedules-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: TRANSPORTS -->
+            <section id="tab-transports" class="tab-pane">
+                <div class="header-actions">
+                    <div class="header-title">
+                        <h2>Transport Vehicles</h2>
+                        <p>Manage transport numbers, modes, and seat capacity</p>
+                    </div>
+                </div>
+
+                <div class="grid-split">
+                    <!-- Form side -->
+                    <div class="card-section">
+                        <div class="card-title">Add Transport Vehicle</div>
+                        <form id="transport-form">
+                            <div class="form-group">
+                                <label for="transportNumber">Vehicle / Flight Number</label>
+                                <input type="text" id="transportNumber" class="input-control" placeholder="e.g. TR-5002" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="transportType">Transport Type</label>
+                                <select id="transportType" class="input-control" required>
+                                    <option value="BUS">Bus</option>
+                                    <option value="TRAIN">Train</option>
+                                    <option value="METRO">Metro</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="capacity">Passenger Capacity</label>
+                                <input type="number" id="capacity" class="input-control" placeholder="e.g. 80" min="1" required>
+                            </div>
+
+                            <button type="submit" class="btn">Add Vehicle</button>
+                        </form>
+                    </div>
+
+                    <!-- Table side -->
+                    <div class="card-section">
+                        <div class="card-title">Vehicle Inventory</div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Vehicle Number</th>
+                                        <th>Type</th>
+                                        <th>Capacity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transports-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- API configuration and auth checker scripts -->
+    <script src="app.js"></script>
+    <script>
+        // Enforce admin permission
+        const auth = checkAuth(['ROLE_ADMIN']);
+        if (!auth) {
+            // Stop executing if auth validation failed and redirected
+            throw new Error("Authorization Required");
+        }
+
+        // Global Charts storage so we can destroy and redraw
+        let volumeChart = null;
+        let shareChart = null;
+
+        // Document OnLoad Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTabs();
+            loadAllDashboardData();
+        });
+
+        // Tab Switching Router
+        function setupTabs() {
+            const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+            menuItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    // Remove active states
+                    document.querySelectorAll('.sidebar-menu .menu-item').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+                    
+                    // Add active states to clicked item
+                    item.classList.add('active');
+                    const tabId = item.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    // Load matching tab content
+                    if (tabId === 'tab-dashboard') {
+                        loadAllDashboardData();
+                    } else if (tabId === 'tab-users') {
+                        loadUsers(false);
+                    } else if (tabId === 'tab-routes') {
+                        loadRoutes();
+                    } else if (tabId === 'tab-schedules') {
+                        loadSchedules();
+                    } else if (tabId === 'tab-transports') {
+                        loadTransports();
+                    }
+                });
+            });
+        }
+
+        // Alert helper
+        function showAlert(msg, isError = false) {
+            const alertDiv = document.getElementById('global-alert');
+            alertDiv.textContent = msg;
+            alertDiv.className = isError ? 'alert alert-danger' : 'alert alert-success';
+            alertDiv.style.display = 'block';
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // ==========================================
+        // 1. DASHBOARD AND ANALYTICS LOGIC
+        // ==========================================
+        async function loadAllDashboardData() {
+            try {
+                // Fetch stats counters
+                const stats = await fetchAPI('/reports/stats');
+                if (stats) {
+                    document.getElementById('stat-routes').textContent = stats.totalRoutes || 0;
+                    document.getElementById('stat-schedules').textContent = stats.totalSchedules || 0;
+                    document.getElementById('stat-users').textContent = stats.totalUsers || 0;
+                    document.getElementById('stat-transports').textContent = stats.totalTransports || 0;
+                    document.getElementById('stat-alerts').textContent = stats.totalAlerts || 0;
+                }
+
+                // Render Chart 1: Volume by Day
+                const volumeData = await fetchAPI('/reports/volume');
+                renderVolumeChart(volumeData || []);
+
+                // Render Chart 2: Share by Transport Type
+                const shareData = await fetchAPI('/reports/share');
+                renderShareChart(shareData || []);
+
+            } catch (err) {
+                console.error("Dashboard error:", err);
+            }
+        }
+
+        function renderVolumeChart(data) {
+            const labels = data.map(item => item.day);
+            const counts = data.map(item => item.count);
+
+            const ctx = document.getElementById('volumeChart').getContext('2d');
+            if (volumeChart) volumeChart.destroy();
+
+            volumeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Schedule Counts',
+                        data: counts,
+                        backgroundColor: '#6366F1',
+                        borderRadius: 8,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#9CA3AF' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9CA3AF' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function renderShareChart(data) {
+            const labels = data.map(item => item.type);
+            const counts = data.map(item => item.count);
+
+            const ctx = document.getElementById('shareChart').getContext('2d');
+            if (shareChart) shareChart.destroy();
+
+            shareChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: ['#06B6D4', '#6366F1', '#EC4899', '#10B981'],
+                        borderColor: 'transparent',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#9CA3AF', padding: 16 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // 2. USER ACTIONS LOGIC
+        // ==========================================
+        async function loadUsers(operatorsOnly = false) {
+            const btnAll = document.getElementById('btn-all-users');
+            const btnOperators = document.getElementById('btn-operator-users');
+            
+            if (operatorsOnly) {
+                btnAll.classList.remove('active');
+                btnOperators.classList.add('active');
+            } else {
+                btnAll.classList.add('active');
+                btnOperators.classList.remove('active');
+            }
+
+            try {
+                const endpoint = operatorsOnly ? '/admin/users/operators' : '/admin/users';
+                const users = await fetchAPI(endpoint);
+                const tbody = document.getElementById('users-table-body');
+                tbody.innerHTML = '';
+
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No users found.</td></tr>`;
+                    return;
+                }
+
+                users.forEach(user => {
+                    const tr = document.createElement('tr');
+                    
+                    // Admin cannot delete themselves
+                    const isSelf = user.username === localStorage.getItem('username');
+                    const actionBtn = isSelf 
+                        ? `<span class="badge badge-primary">Current User</span>` 
+                        : `<button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; width: auto;" onclick="deleteUser(${user.id})">Delete</button>`;
+
+                    tr.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.fullName || 'N/A'}</td>
+                        <td>${user.email || 'N/A'}</td>
+                        <td><span class="badge ${user.role === 'ROLE_ADMIN' ? 'badge-danger' : (user.role === 'ROLE_OPERATOR' ? 'badge-warning' : 'badge-success')}">${user.role.replace('ROLE_', '')}</span></td>
+                        <td>${actionBtn}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Error loading users list.', true);
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user?')) return;
+            try {
+                await fetchAPI(`/admin/users/${userId}`, { method: 'DELETE' });
+                showAlert('User deleted successfully.');
+                loadUsers(document.getElementById('btn-operator-users').classList.contains('active'));
+            } catch (err) {
+                showAlert('Failed to delete user.', true);
+            }
+        }
+
+        // ==========================================
+        // 3. ROUTES CRUD LOGIC
+        // ==========================================
+        async function loadRoutes() {
+            try {
+                const routes = await fetchAPI('/routes');
+                const tbody = document.getElementById('routes-table-body');
+                tbody.innerHTML = '';
+
+                if (!routes || routes.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No routes available.</td></tr>`;
+                    return;
+                }
+
+                routes.forEach(route => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${route.id}</td>
+                        <td><strong>${route.routeName}</strong></td>
+                        <td>${route.source}</td>
+                        <td>${route.destination}</td>
+                        <td>${route.estimatedDuration || 'N/A'}</td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;" onclick="editRoute(${JSON.stringify(route).replace(/"/g, '&quot;')})">Edit</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; width: auto;" onclick="deleteRoute(${route.id})">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Failed to load routes list.', true);
+            }
+        }
+
+        document.getElementById('route-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const routeId = document.getElementById('route-id').value;
+            const payload = {
+                routeName: document.getElementById('routeName').value.trim(),
+                source: document.getElementById('source').value.trim(),
+                destination: document.getElementById('destination').value.trim(),
+                estimatedDuration: document.getElementById('estimatedDuration').value.trim()
+            };
+
+            try {
+                if (routeId) {
+                    // Update
+                    await fetchAPI(`/routes/${routeId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(payload)
+                    });
+                    showAlert('Route updated successfully.');
+                } else {
+                    // Create
+                    await fetchAPI('/routes', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    showAlert('Route created successfully.');
+                }
+                resetRouteForm();
+                loadRoutes();
+            } catch (err) {
+                showAlert('Error saving route. Please check name duplicates or data formats.', true);
+            }
+        });
+
+        function editRoute(route) {
+            document.getElementById('route-id').value = route.id;
+            document.getElementById('routeName').value = route.routeName;
+            document.getElementById('source').value = route.source;
+            document.getElementById('destination').value = route.destination;
+            document.getElementById('estimatedDuration').value = route.estimatedDuration || '';
+            
+            document.getElementById('route-form-title').textContent = 'Edit Route #' + route.id;
+            document.getElementById('route-submit-btn').textContent = 'Save Changes';
+            document.getElementById('route-cancel-btn').style.display = 'block';
+        }
+
+        function resetRouteForm() {
+            document.getElementById('route-form').reset();
+            document.getElementById('route-id').value = '';
+            document.getElementById('route-form-title').textContent = 'Add New Route';
+            document.getElementById('route-submit-btn').textContent = 'Create Route';
+            document.getElementById('route-cancel-btn').style.display = 'none';
+        }
+
+        async function deleteRoute(routeId) {
+            if (!confirm('Are you sure you want to delete this route? This will delete all linked schedules.')) return;
+            try {
+                await fetchAPI(`/routes/${routeId}`, { method: 'DELETE' });
+                showAlert('Route deleted successfully.');
+                loadRoutes();
+            } catch (err) {
+                showAlert('Failed to delete route.', true);
+            }
+        }
+
+        // ==========================================
+        // 4. SCHEDULES CRUD LOGIC
+        // ==========================================
+        async function loadSchedules() {
+            try {
+                // Populate Route & Transport selects first
+                await populateSchedulesDropdowns();
+
+                const schedules = await fetchAPI('/schedules');
+                const tbody = document.getElementById('schedules-table-body');
+                tbody.innerHTML = '';
+
+                if (!schedules || schedules.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No active timetables found.</td></tr>`;
+                    return;
+                }
+
+                schedules.forEach(schedule => {
+                    const tr = document.createElement('tr');
+                    
+                    const rName = schedule.route ? schedule.route.routeName : 'N/A';
+                    const tNum = schedule.transport ? schedule.transport.transportNumber : 'N/A';
+                    const dep = formatDateTime(schedule.departureTime);
+                    const arr = formatDateTime(schedule.arrivalTime);
+                    
+                    let statusBadge = '';
+                    if (schedule.status === 'ON_TIME') statusBadge = '<span class="badge badge-success">ON TIME</span>';
+                    else if (schedule.status === 'DELAYED') statusBadge = '<span class="badge badge-warning">DELAYED</span>';
+                    else statusBadge = '<span class="badge badge-danger">CANCELLED</span>';
+
+                    // Prepare object to pass to edit handler
+                    const schedObj = {
+                        id: schedule.id,
+                        routeId: schedule.route ? schedule.route.id : '',
+                        transportId: schedule.transport ? schedule.transport.id : '',
+                        departureTime: schedule.departureTime,
+                        arrivalTime: schedule.arrivalTime,
+                        status: schedule.status
+                    };
+
+                    tr.innerHTML = `
+                        <td>${schedule.id}</td>
+                        <td><strong>${rName}</strong></td>
+                        <td>${tNum}</td>
+                        <td>${dep}</td>
+                        <td>${arr}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;" onclick="editSchedule(${JSON.stringify(schedObj).replace(/"/g, '&quot;')})">Edit</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; width: auto;" onclick="deleteSchedule(${schedule.id})">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Failed to load schedules list.', true);
+            }
+        }
+
+        async function populateSchedulesDropdowns() {
+            try {
+                const routes = await fetchAPI('/routes');
+                const transports = await fetchAPI('/transports');
+
+                const rSelect = document.getElementById('sched-route');
+                const tSelect = document.getElementById('sched-transport');
+
+                // Preserve selections
+                const savedR = rSelect.value;
+                const savedT = tSelect.value;
+
+                rSelect.innerHTML = '<option value="">-- Select Route --</option>';
+                tSelect.innerHTML = '<option value="">-- Select Transport --</option>';
+
+                if (routes) {
+                    routes.forEach(r => {
+                        rSelect.innerHTML += `<option value="${r.id}">${r.routeName} (${r.source} → ${r.destination})</option>`;
+                    });
+                }
+
+                if (transports) {
+                    transports.forEach(t => {
+                        tSelect.innerHTML += `<option value="${t.id}">${t.transportNumber} [${t.type}]</option>`;
+                    });
+                }
+
+                rSelect.value = savedR;
+                tSelect.value = savedT;
+            } catch (err) {
+                console.error("Dropdown population error:", err);
+            }
+        }
+
+        document.getElementById('schedule-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const schedId = document.getElementById('schedule-id').value;
+            
+            // Format dates back to ISO strings
+            const depTime = document.getElementById('departureTime').value;
+            const arrTime = document.getElementById('arrivalTime').value;
+            
+            const payload = {
+                route: { id: parseInt(document.getElementById('sched-route').value) },
+                transport: { id: parseInt(document.getElementById('sched-transport').value) },
+                departureTime: depTime,
+                arrivalTime: arrTime,
+                status: document.getElementById('sched-status').value
+            };
+
+            try {
+                if (schedId) {
+                    // Update
+                    await fetchAPI(`/schedules/${schedId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(payload)
+                    });
+                    showAlert('Schedule updated successfully.');
+                } else {
+                    // Create
+                    await fetchAPI('/schedules', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    showAlert('Schedule created successfully.');
+                }
+                resetScheduleForm();
+                loadSchedules();
+            } catch (err) {
+                showAlert('Failed to save schedule. Check input details and date timeline bounds.', true);
+            }
+        });
+
+        function editSchedule(sched) {
+            document.getElementById('schedule-id').value = sched.id;
+            document.getElementById('sched-route').value = sched.routeId;
+            document.getElementById('sched-transport').value = sched.transportId;
+            
+            // Convert LocalDateTime to datetime-local picker format (YYYY-MM-DDThh:mm)
+            if (sched.departureTime) {
+                document.getElementById('departureTime').value = sched.departureTime.slice(0, 16);
+            }
+            if (sched.arrivalTime) {
+                document.getElementById('arrivalTime').value = sched.arrivalTime.slice(0, 16);
+            }
+            
+            document.getElementById('sched-status').value = sched.status;
+
+            document.getElementById('schedule-form-title').textContent = 'Edit Schedule #' + sched.id;
+            document.getElementById('sched-submit-btn').textContent = 'Save Changes';
+            document.getElementById('sched-cancel-btn').style.display = 'block';
+        }
+
+        function resetScheduleForm() {
+            document.getElementById('schedule-form').reset();
+            document.getElementById('schedule-id').value = '';
+            document.getElementById('schedule-form-title').textContent = 'Add Schedule';
+            document.getElementById('sched-submit-btn').textContent = 'Create Schedule';
+            document.getElementById('sched-cancel-btn').style.display = 'none';
+        }
+
+        async function deleteSchedule(schedId) {
+            if (!confirm('Are you sure you want to delete this schedule?')) return;
+            try {
+                await fetchAPI(`/schedules/${schedId}`, { method: 'DELETE' });
+                showAlert('Schedule deleted successfully.');
+                loadSchedules();
+            } catch (err) {
+                showAlert('Failed to delete schedule.', true);
+            }
+        }
+
+        // ==========================================
+        // 5. TRANSPORTS LOGIC
+        // ==========================================
+        async function loadTransports() {
+            try {
+                const transports = await fetchAPI('/transports');
+                const tbody = document.getElementById('transports-table-body');
+                tbody.innerHTML = '';
+
+                if (!transports || transports.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No transport inventory configured.</td></tr>`;
+                    return;
+                }
+
+                transports.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${t.id}</td>
+                        <td><strong>${t.transportNumber}</strong></td>
+                        <td><span class="badge badge-primary">${t.type}</span></td>
+                        <td>${t.capacity} passengers</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('Failed to load transport lists.', true);
+            }
+        }
+
+        document.getElementById('transport-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const payload = {
+                transportNumber: document.getElementById('transportNumber').value.trim(),
+                type: document.getElementById('transportType').value,
+                capacity: parseInt(document.getElementById('capacity').value)
+            };
+
+            try {
+                await fetchAPI('/transports', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showAlert('Vehicle added successfully.');
+                document.getElementById('transport-form').reset();
+                loadTransports();
+            } catch (err) {
+                showAlert('Failed to add vehicle. The vehicle number must be unique.', true);
+            }
+        });
+    </script>
+</body>
+</html>

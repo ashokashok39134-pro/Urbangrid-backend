@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanGrid - Register</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Create Account</h1>
+                <p>Register to manage or use UrbanGrid services</p>
+            </div>
+            
+            <div id="register-alert" class="alert" style="display: none;"></div>
+            
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" class="input-control" placeholder="Choose a username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" class="input-control" placeholder="Enter your full name" required autocomplete="name">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="input-control" placeholder="Enter your email" required autocomplete="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="input-control" placeholder="Choose a password (min 6 characters)" required autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Select Role</label>
+                    <select id="role" class="input-control" required>
+                        <option value="ROLE_COMMUTER" selected>Commuter</option>
+                        <option value="ROLE_OPERATOR">Operator</option>
+                        <option value="ROLE_ADMIN">Administrator</option>
+                    </select>
+                </div>
+                
+                <button type="submit" id="register-btn" class="btn">Register</button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Already have an account? <a href="login.html">Sign in here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const usernameInput = document.getElementById('username').value.trim();
+            const fullNameInput = document.getElementById('fullName').value.trim();
+            const emailInput = document.getElementById('email').value.trim();
+            const passwordInput = document.getElementById('password').value;
+            const roleInput = document.getElementById('role').value;
+            
+            const alertDiv = document.getElementById('register-alert');
+            const submitBtn = document.getElementById('register-btn');
+
+            alertDiv.style.display = 'none';
+
+            if (passwordInput.length < 6) {
+                alertDiv.textContent = 'Password must be at least 6 characters.';
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.style.display = 'block';
+                return;
+            }
+
+            submitBtn.textContent = 'Registering...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: usernameInput,
+                        fullName: fullNameInput,
+                        email: emailInput,
+                        password: passwordInput,
+                        role: roleInput
+                    })
+                });
+
+                const responseText = await response.text();
+
+                if (response.ok) {
+                    alertDiv.textContent = 'Registration successful! Redirecting to login...';
+                    alertDiv.className = 'alert alert-success';
+                    alertDiv.style.display = 'block';
+                    document.getElementById('register-form').reset();
+
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1500);
+                } else {
+                    alertDiv.textContent = responseText || 'Registration failed. Username or email may already be taken.';
+                    alertDiv.className = 'alert alert-danger';
+                    alertDiv.style.display = 'block';
+                }
+            } catch (err) {
+                alertDiv.textContent = 'Cannot connect to backend server. Make sure it is running on port 8080.';
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.style.display = 'block';
+                console.error(err);
+            } finally {
+                submitBtn.textContent = 'Register';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
